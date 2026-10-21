@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contrôle des factures reçues</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@300;400;500;600&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f6fa;
+  --surface:   #ffffff;
+  --card:      #ffffff;
+  --border:    #dde1ea;
+  --border-hi: #b5bccd;
+  --text:      #1f2433;
+  --text-dim:  #5b6276;
+  --accent:    #e0a400;
+  --green:     #1d8a46;
+  --red:       #c43535;
+  --blue:      #2d6cb0;
+  --purple:    #7346ad;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --radius:    10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* mode lecture facilitée (dys, allophones) */
+body.facile { font-family: 'Lexend', var(--font-body); font-size: 18px; line-height: 1.95; letter-spacing: .02em; word-spacing: .12em; }
+body.facile .contexte, body.facile .question p { font-size: 17px; }
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.site-header {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 40px 20px 30px;
+  text-align: center;
+}
+.site-header .kicker {
+  display: inline-block;
+  background: var(--accent);
+  color: #1f2433;
+  font-family: var(--font-head);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 3px 12px;
+  border-radius: 3px;
+  margin-bottom: 16px;
+}
+.site-header h1 {
+  font-family: var(--font-head);
+  font-size: clamp(24px, 5vw, 38px);
+  font-weight: 800;
+  color: #141826;
+  margin-bottom: 8px;
+  line-height: 1.15;
+}
+.site-header .sub {
+  color: var(--text-dim);
+  font-size: 15px;
+  max-width: 560px;
+  margin: 0 auto 22px;
+}
+
+/* ── NAV ANCRES ──────────────────────────────────────────── */
+.nav-anchors { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.nav-anchors a {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  text-decoration: none;
+  transition: border-color .15s, color .15s;
+}
+.nav-anchors a:hover { border-color: var(--accent); color: #9a6f00; }
+
+/* ── BARRE D'OUTILS COLLANTE ─────────────────────────────── */
+.toolbar {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(255,255,255,.96);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;
+  font-size: 13px;
+}
+.toolbar .score { font-weight: 600; }
+.toolbar .barre { width: 160px; height: 10px; background: #e8ebf2; border-radius: 6px; overflow: hidden; }
+.toolbar .barre span { display: block; height: 100%; width: 0; background: var(--green); transition: width .3s; }
+.tool-btn {
+  background: var(--surface); border: 1px solid var(--border-hi); border-radius: 6px;
+  padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; color: var(--text);
+}
+.tool-btn:hover { border-color: var(--accent); }
+.tool-btn.on { background: #fff3cc; border-color: var(--accent); }
+
+/* ── CONTENEUR PRINCIPAL ─────────────────────────────────── */
+main { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
+
+/* ── TITRE DE BLOC ───────────────────────────────────────── */
+.bloc-titre {
+  display: flex; align-items: center; gap: 14px;
+  margin: 48px 0 6px; padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  scroll-margin-top: 60px;
+}
+.bloc-titre:first-child { margin-top: 0; }
+.bloc-titre .icone { font-size: 26px; flex-shrink: 0; }
+.bloc-titre h2 { font-family: var(--font-head); font-size: 21px; font-weight: 800; color: #141826; }
+.bloc-titre .duree { margin-left: auto; font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+/* ── MÉMO FORMULE ────────────────────────────────────────── */
+.memo {
+  background: #eef8f1;
+  border: 1px solid #c7e6d2;
+  border-left: 4px solid var(--green);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 14px 0 22px;
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+.memo .memo-titre {
+  font-family: var(--font-head); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--green); margin-bottom: 8px;
+}
+.memo code {
+  display: block; background: #ffffff; border: 1px solid #d5ecdd; border-radius: 5px;
+  padding: 8px 14px; color: #145c30; font-family: 'Courier New', monospace; font-size: 14px; margin: 4px 0;
+}
+.memo .note { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; }
+
+/* ── CARTE EXERCICE ──────────────────────────────────────── */
+.exo-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 14px; overflow: hidden; transition: border-color .15s;
+  box-shadow: 0 1px 2px rgba(20,24,38,.04);
+}
+.exo-card:hover { border-color: var(--border-hi); }
+.exo-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  cursor: pointer; user-select: none; list-style: none;
+}
+.exo-header::-webkit-details-marker { display: none; }
+.exo-num { font-family: var(--font-head); font-size: 11px; font-weight: 700; color: var(--text-dim); flex-shrink: 0; min-width: 44px; }
+.badge { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 2px 9px; border-radius: 3px; flex-shrink: 0; }
+.badge-1 { background: #e6f5ec; color: var(--green); border: 1px solid #bfe3cc; }
+.badge-2 { background: #fff5d6; color: #8a6400; border: 1px solid #f0d98c; }
+.badge-3 { background: #fbe9e9; color: var(--red); border: 1px solid #f0c4c4; }
+.badge-exam { background: #f1eafa; color: var(--purple); border: 1px solid #d9c8ef; }
+.exo-titre-txt { font-size: 15px; font-weight: 500; color: var(--text); flex: 1; }
+.chevron { color: var(--text-dim); font-size: 13px; flex-shrink: 0; transition: transform .2s; }
+details[open] > summary .chevron { transform: rotate(180deg); }
+
+/* ── CORPS DE L'EXERCICE ─────────────────────────────────── */
+.exo-body { padding: 0 18px 20px; border-top: 1px solid var(--border); }
+.contexte {
+  background: #eef4fb; border-left: 3px solid var(--blue); border-radius: 0 6px 6px 0;
+  padding: 14px 18px; margin: 16px 0; font-size: 15px; line-height: 1.75; position: relative;
+}
+.contexte strong { color: #141826; }
+
+.tableau-donnees { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+.tableau-donnees th {
+  background: #f0f2f7; color: var(--text-dim); font-family: var(--font-head);
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+}
+.tableau-donnees td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+.tableau-donnees tr:last-child td { border-bottom: none; }
+.tableau-donnees td.num { font-weight: 600; text-align: right; white-space: nowrap; }
+.tableau-donnees tr.total-row td { background: #fff7dc; font-weight: 700; color: #6b4e00; }
+
+.questions { margin: 18px 0 0; }
+.question { display: flex; gap: 10px; margin-bottom: 14px; align-items: flex-start; }
+.question .q-num {
+  flex-shrink: 0; width: 24px; height: 24px; background: var(--accent); color: #1f2433;
+  font-family: var(--font-head); font-weight: 800; font-size: 11px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; margin-top: 2px;
+}
+.question > div { flex: 1; }
+.question p { font-size: 15px; margin: 0; }
+
+/* ── ORDRE DE GRANDEUR ───────────────────────────────────── */
+.ordre-grandeur {
+  background: #fff8e0; border: 1px solid #f0dc9a; border-radius: 6px;
+  padding: 10px 14px; font-size: 13.5px; color: #6b5200; margin: 12px 0 0;
+}
+.ordre-grandeur::before { content: "💡 "; }
+
+/* ── BOUTON CORRECTION ───────────────────────────────────── */
+.btn-corrige {
+  background: none; border: 1px solid var(--border-hi); border-radius: 6px; color: var(--text-dim);
+  cursor: pointer; font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  padding: 8px 16px; margin-top: 18px; transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.btn-corrige:hover { border-color: var(--green); color: var(--green); }
+
+/* ── CORRECTION ──────────────────────────────────────────── */
+.correction {
+  display: none; background: #eef8f1; border: 1px solid #c7e6d2; border-radius: 6px;
+  padding: 16px 18px; margin-top: 14px; font-size: 14.5px; line-height: 1.8;
+}
+.correction.visible { display: block; }
+.correction .corr-etape { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #d3eadb; }
+.correction .corr-etape:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.correction .c-num {
+  display: inline-block; background: var(--green); color: #fff; font-family: var(--font-head);
+  font-weight: 800; font-size: 10px; width: 18px; height: 18px; border-radius: 50%;
+  text-align: center; line-height: 18px; margin-right: 6px;
+}
+.correction code {
+  display: block; background: #fff; border: 1px solid #d5ecdd; border-radius: 4px; padding: 6px 12px;
+  color: #145c30; font-family: 'Courier New', monospace; font-size: 14px; margin: 5px 0;
+}
+.correction .res { font-family: var(--font-head); font-weight: 700; color: #141826; }
+.correction .conclu { margin-top: 8px; font-size: 14px; color: #2c6a43; font-style: italic; }
+.correction .tableau-corr { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 8px 0; }
+.correction .tableau-corr th {
+  background: #dcf0e3; color: var(--text-dim); font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; padding: 6px 10px; text-align: left;
+}
+.correction .tableau-corr td { padding: 6px 10px; border-bottom: 1px solid #d3eadb; color: #24402e; }
+.correction .tableau-corr td.val { font-weight: 700; color: var(--green); text-align: right; white-space: nowrap; }
+.correction .tableau-corr tr.t-total td { background: #fff3cc; font-weight: 700; color: #6b4e00; }
+
+/* ── SÉPARATEUR / FOOTER ─────────────────────────────────── */
+hr.section-sep { border: none; border-top: 1px solid var(--border); margin: 50px 0 0; }
+.site-footer { border-top: 1px solid var(--border); padding: 28px 20px; text-align: center; color: var(--text-dim); font-size: 12px; }
+
+/* ══ AJOUTS : DOCUMENTS ET INTERACTIONS ═════════════════════ */
+
+/* lexique : cartes à retourner */
+.lexique { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 14px 0; }
+.carte-mot {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; cursor: pointer; text-align: center; min-height: 118px;
+  display: flex; flex-direction: column; justify-content: center; transition: border-color .15s, background .15s;
+  font: inherit; color: inherit;
+}
+.carte-mot:hover { border-color: var(--accent); }
+.carte-mot .emoji { font-size: 28px; line-height: 1.2; }
+.carte-mot .mot { font-weight: 600; font-size: 15px; }
+.carte-mot .def { display: none; font-size: 14px; line-height: 1.5; }
+.carte-mot.retournee { background: #fff8e0; border-color: var(--accent); }
+.carte-mot.retournee .def { display: block; }
+.carte-mot.retournee .emoji { font-size: 20px; }
+.carte-mot .aide { font-size: 11px; color: var(--text-dim); }
+.carte-mot.retournee .aide { display: none; }
+
+/* documents professionnels */
+.doc {
+  background: #fffefb; border: 1px solid #cfd4df; border-radius: 6px; margin: 14px 0;
+  font-size: 13.5px; box-shadow: 0 2px 6px rgba(20,24,38,.06); overflow-x: auto;
+}
+.doc-etiquette {
+  background: #2b3245; color: #fff; font-size: 12px; font-weight: 600; letter-spacing: .5px;
+  padding: 6px 14px; border-radius: 6px 6px 0 0;
+}
+.doc-in { padding: 14px 16px; min-width: 560px; }
+.doc-entete { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 10px; line-height: 1.45; }
+.doc-entete .bloc-fourn { font-weight: 600; }
+.doc-entete .bloc-client { text-align: left; padding: 6px 10px; border: 1px dashed #cfd4df; border-radius: 4px; }
+.doc-titre { font-weight: 800; font-family: var(--font-head); font-size: 15px; margin: 6px 0 2px; }
+.doc-cond { font-size: 12.5px; background: #f4f6fa; border-radius: 4px; padding: 8px 10px; margin: 8px 0; line-height: 1.55; }
+.doc table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.doc th { background: #3a4258; color: #fff; padding: 6px 8px; font-weight: 600; text-align: left; font-size: 12px; }
+.doc td { border: 1px solid #d7dbe4; padding: 5px 8px; }
+.doc td.n { text-align: right; white-space: nowrap; }
+.doc td.lib { font-weight: 600; background: #f4f6fa; }
+.doc td.vide { border: none; }
+.doc .signature { font-size: 12.5px; margin-top: 10px; line-height: 1.5; }
+
+/* chasse aux erreurs */
+.hunt td.clic { cursor: pointer; }
+.hunt td.clic:hover { outline: 2px dashed var(--accent); }
+.hunt td.entoure { outline: 3px solid var(--red); outline-offset: -3px; border-radius: 40%; background: #fdeaea; font-weight: 700; }
+.hunt td.cons { background: #fff3cc; }
+.hunt td.rien { background: #eef0f4; }
+.compteur { font-weight: 600; margin: 8px 0; }
+
+/* boutons de choix */
+.choix { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.choix button, .vf button {
+  background: #fff; border: 1.5px solid var(--border-hi); border-radius: 8px;
+  padding: 8px 14px; font: inherit; font-size: 14.5px; cursor: pointer; color: var(--text);
+  transition: background .15s, border-color .15s;
+}
+.choix button:hover:not(:disabled), .vf button:hover:not(:disabled) { border-color: var(--accent); background: #fffaea; }
+button.bon { background: #e3f5ea !important; border-color: var(--green) !important; color: #145c30 !important; font-weight: 600; }
+button.faux { background: #fbe9e9 !important; border-color: var(--red) !important; color: #8a2020 !important; }
+button:disabled { cursor: default; }
+
+/* lignes oui / non */
+.ligne-on { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.ligne-on:last-child { border-bottom: none; }
+.ligne-on .lib-on { flex: 1; min-width: 200px; }
+.ligne-on .choix { margin-top: 0; }
+
+/* champs de réponse */
+.calc { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 0; border-bottom: 1px dashed var(--border); }
+.calc:last-of-type { border-bottom: none; }
+.calc .lib-c { min-width: 200px; flex: 1; }
+.calc .formule { font-family: 'Courier New', monospace; font-size: 14px; color: var(--text-dim); }
+input.rep, select.sel {
+  font: inherit; font-size: 15px; padding: 5px 8px; border: 1.5px solid var(--border-hi);
+  border-radius: 6px; background: #fff; color: var(--text);
+}
+input.rep { width: 120px; text-align: right; }
+input.rep.court { width: 80px; }
+input.rep.ok, select.sel.ok { border-color: var(--green); background: #e3f5ea; }
+input.rep.ko, select.sel.ko { border-color: var(--red); background: #fbe9e9; }
+.btn-verif {
+  background: var(--blue); color: #fff; border: none; border-radius: 6px; padding: 8px 16px;
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px;
+}
+.btn-verif:hover { background: #24598f; }
+.retour { font-size: 14px; margin-top: 8px; min-height: 1.2em; }
+.retour.ok { color: var(--green); font-weight: 600; }
+.retour.ko { color: var(--red); }
+
+/* tableau à compléter */
+.tab-rempli { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
+.tab-rempli th { background: #3a4258; color: #fff; padding: 6px 8px; font-size: 12px; text-align: left; }
+.tab-rempli td { border: 1px solid #d7dbe4; padding: 5px 8px; }
+.tab-rempli td.lib { font-weight: 600; background: #f4f6fa; }
+.tab-rempli input.rep { width: 100%; min-width: 80px; }
+.scroll-x { overflow-x: auto; }
+
+/* étapes visuelles du calcul */
+.chaine { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; font-size: 13.5px; }
+.chaine span.et { background: #fff; border: 1px solid #c7e6d2; border-radius: 6px; padding: 4px 9px; }
+.chaine span.fl { color: var(--green); font-weight: 700; }
+
+.bravo { display: none; background: #e3f5ea; border: 1px solid #bfe3cc; border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-weight: 600; color: #145c30; }
+.bravo.visible { display: block; }
+
+@keyframes secoue { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+.secoue { animation: secoue .25s 2; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .exo-titre-txt { font-size: 14px; }
+  .contexte { font-size: 14px; }
+  .tableau-donnees { font-size: 12.5px; }
+  .bloc-titre .duree { display: none; }
+}
+@media print {
+  .toolbar, .btn-corrige, .btn-verif { display: none; }
+  details { display: block; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="kicker">🧾 gestion appliquée – terminale bac pro boulanger-pâtissier</div>
+  <h1>Le contrôle<br>des factures reçues</h1>
+  <p class="sub">Tu es apprenti(e) à la boulangerie Le Pétrin Doré. Ta patronne te confie une facture à vérifier. 6 missions, tous les documents sont sur cette page.</p>
+  <nav class="nav-anchors">
+    <a href="#mots">📖 Mots-clés</a>
+    <a href="#m1">1 · Lire</a>
+    <a href="#m2">2 · Calculer</a>
+    <a href="#m3">3 · Comparer</a>
+    <a href="#m4">4 · Rectifier</a>
+    <a href="#m5">5 · Test</a>
+    <a href="#m6">6 · Examen</a>
+  </nav>
+</header>
+
+<div class="toolbar">
+  <span class="score">⭐ <span id="pts">0</span> / <span id="tot">0</span></span>
+  <span class="barre"><span id="barre"></span></span>
+  <button class="tool-btn" id="btnFacile" type="button">Aa lecture facilitée</button>
+</div>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════════
+     MOTS-CLÉS
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="mots">
+  <span class="icone">📖</span>
+  <h2>Les mots à connaître</h2>
+  <span class="duree">⏱ 5 min</span>
+</div>
+
+<div class="contexte lisible">
+  Clique sur chaque carte pour voir la définition.
+</div>
+
+<div class="lexique">
+  <button class="carte-mot" type="button"><span class="emoji">🧾</span><span class="mot">Facture</span><span class="aide">clique</span><span class="def">Document envoyé par le vendeur. Il dit ce que tu as acheté et combien tu dois payer.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">🏭</span><span class="mot">Fournisseur</span><span class="aide">clique</span><span class="def">L'entreprise qui vend. Exemple : le moulin qui vend la farine.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">🥖</span><span class="mot">Client</span><span class="aide">clique</span><span class="def">L'entreprise qui achète. Ici : ta boulangerie.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">📦</span><span class="mot">Bon de livraison</span><span class="aide">clique</span><span class="def">Document qui arrive avec la marchandise. Il dit ce qui a vraiment été livré.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">🏷️</span><span class="mot">Prix unitaire HT</span><span class="aide">clique</span><span class="def">Le prix d'un seul article (1 sac, 1 carton), sans la TVA.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">➕</span><span class="mot">Montant brut HT</span><span class="aide">clique</span><span class="def">Le total de tous les articles, avant la remise.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">✂️</span><span class="mot">Remise</span><span class="aide">clique</span><span class="def">Une réduction de prix, en %. Exemple : 10 % de remise sur 100 € = 10 € en moins.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">🚚</span><span class="mot">Franco de port</span><span class="aide">clique</span><span class="def">Le transport est gratuit pour le client.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">🏛️</span><span class="mot">TVA</span><span class="aide">clique</span><span class="def">Taxe payée à l'État. Pour la farine, le beurre, le sucre : 5,5 %. Pour le matériel : 20 %.</span></button>
+  <button class="carte-mot" type="button"><span class="emoji">💶</span><span class="mot">HT / TTC</span><span class="aide">clique</span><span class="def">HT = hors taxes (sans TVA). TTC = toutes taxes comprises (avec TVA). TTC = HT + TVA.</span></button>
+</div>
+
+<div class="memo">
+  <div class="memo-titre">🗂 mémo – pourquoi vérifier une facture ?</div>
+  <p>La boulangerie paie ce qui est écrit sur la facture. Si la facture a une erreur, la boulangerie perd de l'argent. On vérifie <strong>4 choses</strong> :</p>
+  <code>① les calculs   ② les quantités livrées   ③ les prix   ④ les conditions de vente</code>
+</div>
+
+<hr class="section-sep">
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION 1 – LIRE LA FACTURE
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="m1">
+  <span class="icone">🔍</span>
+  <h2>Mission 1 – lire une facture</h2>
+  <span class="duree">⏱ 10 min</span>
+</div>
+
+<div class="memo">
+  <div class="memo-titre">🗂 mémo – les 3 parties d'une facture</div>
+  <code>EN-TÊTE  → qui vend, qui achète, numéro, date, conditions</code>
+  <code>CORPS    → les articles : référence, désignation, quantité, prix unitaire, montant</code>
+  <code>PIED     → les totaux : brut, remise, frais de transport, TVA, TTC</code>
+</div>
+
+<details class="exo-card" open>
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 1</span>
+    <span class="badge badge-1">⬆ décollage</span>
+    <span class="exo-titre-txt">Qui ? Quoi ? Quand ?</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">
+      Mme Lefèvre, ta patronne, a reçu cette facture. Elle te demande : <strong>« Lis la facture et réponds à mes questions. »</strong>
+    </div>
+    <div class="doc-slot" data-doc="facture"></div>
+    <div class="questions">
+      <div class="question"><span class="q-num">1</span><div>
+        <p>Qui est le fournisseur (celui qui vend) ?</p>
+        <div class="choix" data-q="m1a">
+          <button type="button">Le Pétrin Doré</button><button type="button" data-ok>Moulins de la Saône</button><button type="button">Mme Lefèvre</button>
+        </div></div></div>
+      <div class="question"><span class="q-num">2</span><div>
+        <p>Qui est le client (celui qui achète) ?</p>
+        <div class="choix" data-q="m1b">
+          <button type="button">Moulins de la Saône</button><button type="button" data-ok>Le Pétrin Doré</button>
+        </div></div></div>
+      <div class="question"><span class="q-num">3</span><div>
+        <p>Qui écrit (établit) la facture ?</p>
+        <div class="choix" data-q="m1c">
+          <button type="button" data-ok>Le fournisseur</button><button type="button">Le client</button>
+        </div></div></div>
+      <div class="question"><span class="q-num">4</span><div>
+        <p>Quel est le numéro de la facture ?</p>
+        <div class="choix" data-q="m1d">
+          <button type="button">412</button><button type="button" data-ok>1187</button><button type="button">209</button>
+        </div></div></div>
+      <div class="question"><span class="q-num">5</span><div>
+        <p>Combien de cartons de beurre sont facturés ?</p>
+        <div class="choix" data-q="m1e">
+          <button type="button">8</button><button type="button" data-ok>10</button><button type="button">72</button>
+        </div></div></div>
+    </div>
+    <div class="ordre-grandeur"><strong>Aide :</strong> le fournisseur est en haut à gauche. Le client est dans le cadre à droite.</div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 2</span>
+    <span class="badge badge-1">⬆ décollage</span>
+    <span class="exo-titre-txt">En-tête, corps ou pied ?</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Pour chaque information, choisis la partie de la facture où on la trouve.</div>
+    <div class="grp">
+      <div class="calc"><span class="lib-c">Le nom et l'adresse du fournisseur</span><select class="sel" data-ans="entete"><option value="">…</option><option value="entete">en-tête</option><option value="corps">corps</option><option value="pied">pied</option></select></div>
+      <div class="calc"><span class="lib-c">La quantité de sacs de farine</span><select class="sel" data-ans="corps"><option value="">…</option><option value="entete">en-tête</option><option value="corps">corps</option><option value="pied">pied</option></select></div>
+      <div class="calc"><span class="lib-c">Le taux de remise</span><select class="sel" data-ans="pied"><option value="">…</option><option value="entete">en-tête</option><option value="corps">corps</option><option value="pied">pied</option></select></div>
+      <div class="calc"><span class="lib-c">La date de la facture</span><select class="sel" data-ans="entete"><option value="">…</option><option value="entete">en-tête</option><option value="corps">corps</option><option value="pied">pied</option></select></div>
+      <div class="calc"><span class="lib-c">Le prix unitaire HT du sucre</span><select class="sel" data-ans="corps"><option value="">…</option><option value="entete">en-tête</option><option value="corps">corps</option><option value="pied">pied</option></select></div>
+      <div class="calc"><span class="lib-c">Le montant de la TVA</span><select class="sel" data-ans="pied"><option value="">…</option><option value="entete">en-tête</option><option value="corps">corps</option><option value="pied">pied</option></select></div>
+      <button class="btn-verif" type="button">Vérifier</button>
+      <p class="retour"></p>
+    </div>
+  </div>
+</details>
+
+<hr class="section-sep">
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION 2 – VÉRIFIER LES CALCULS
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="m2">
+  <span class="icone">🧮</span>
+  <h2>Mission 2 – vérifier les calculs</h2>
+  <span class="duree">⏱ 15 min</span>
+</div>
+
+<div class="memo">
+  <div class="memo-titre">🗂 mémo – l'ordre des calculs</div>
+  <code>Montant HT d'un article = quantité × prix unitaire HT</code>
+  <code>Montant brut HT        = somme des montants HT des articles</code>
+  <code>Montant de la remise   = montant brut HT × taux de remise</code>
+  <code>Montant net HT         = montant brut HT − remise</code>
+  <code>Total HT               = montant net HT + frais de transport</code>
+  <code>Montant de la TVA      = total HT × taux de TVA</code>
+  <code>Total TTC              = total HT + montant de la TVA</code>
+  <div class="chaine"><span class="et">brut</span><span class="fl">−</span><span class="et">remise</span><span class="fl">=</span><span class="et">net</span><span class="fl">+</span><span class="et">transport</span><span class="fl">=</span><span class="et">total HT</span><span class="fl">+</span><span class="et">TVA</span><span class="fl">=</span><span class="et">TTC</span></div>
+  <p class="note">Calculatrice autorisée. 10 % = × 0,10 – 5 % = × 0,05 – 5,5 % = × 0,055. Arrondis au centime (2 chiffres après la virgule).</p>
+</div>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 3</span>
+    <span class="badge badge-1">⬆ décollage</span>
+    <span class="exo-titre-txt">Le corps de la facture</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Refais les calculs du corps de la facture n° 1187. Écris le résultat dans chaque case.</div>
+    <div class="doc-slot" data-doc="facture"></div>
+    <div class="grp">
+      <div class="calc"><span class="lib-c">Farine T65</span><span class="formule">50 × 19,00 =</span><input class="rep" data-ans="950" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Farine de seigle T130</span><span class="formule">10 × 26,00 =</span><input class="rep" data-ans="260" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Beurre AOP</span><span class="formule">10 × 72,00 =</span><input class="rep" data-ans="720" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Sucre semoule</span><span class="formule">6 × 26,00 =</span><input class="rep" data-ans="156" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Montant brut HT</span><span class="formule">950 + 260 + 720 + 156 =</span><input class="rep" data-ans="2086" inputmode="decimal"> €</div>
+      <button class="btn-verif" type="button">Vérifier</button>
+      <p class="retour"></p>
+    </div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 4</span>
+    <span class="badge badge-2">◆ intermédiaire</span>
+    <span class="exo-titre-txt">Le pied de la facture</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Continue avec les chiffres écrits sur la facture : remise de <strong>5 %</strong>, transport de <strong>30 €</strong>, TVA de <strong>5,5 %</strong>.</div>
+    <div class="grp">
+      <div class="calc"><span class="lib-c">Montant de la remise</span><span class="formule">2 086 × 0,05 =</span><input class="rep" data-ans="104.30" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Montant net HT</span><span class="formule">2 086 − remise =</span><input class="rep" data-ans="1981.70" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Total HT</span><span class="formule">net HT + 30 =</span><input class="rep" data-ans="2011.70" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Montant de la TVA</span><span class="formule">total HT × 0,055 =</span><input class="rep" data-ans="110.64" inputmode="decimal"> €</div>
+      <div class="calc"><span class="lib-c">Total TTC</span><span class="formule">total HT + TVA =</span><input class="rep" data-ans="2122.34" inputmode="decimal"> €</div>
+      <button class="btn-verif" type="button">Vérifier</button>
+      <p class="retour"></p>
+    </div>
+    <div class="ordre-grandeur"><strong>Ordre de grandeur :</strong> la remise est petite (environ 100 €). La TVA aussi (environ 110 €). Le TTC est un peu plus de 2 100 €.</div>
+    <div class="questions">
+      <div class="question"><span class="q-num">?</span><div>
+        <p>Les calculs de la facture sont justes. Est-ce que la facture est forcément juste ?</p>
+        <div class="choix" data-q="m2z">
+          <button type="button">Oui, c'est fini</button><button type="button" data-ok>Non, il faut encore vérifier les quantités, les prix et les conditions</button>
+        </div></div></div>
+    </div>
+  </div>
+</details>
+
+<hr class="section-sep">
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION 3 – COMPARER
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="m3">
+  <span class="icone">⚖️</span>
+  <h2>Mission 3 – comparer avec les autres documents</h2>
+  <span class="duree">⏱ 20 min</span>
+</div>
+
+<div class="memo">
+  <div class="memo-titre">🗂 mémo – avec quel document je compare ?</div>
+  <code>📦 bon de livraison  → les quantités livrées</code>
+  <code>🏷️ tarifs fournisseur → les prix unitaires</code>
+  <code>📋 fiche fournisseur  → la remise, le transport, le règlement</code>
+  <p class="note">Une différence = une <strong>anomalie</strong>. On l'entoure sur la facture.</p>
+</div>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 5</span>
+    <span class="badge badge-1">⬆ décollage</span>
+    <span class="exo-titre-txt">Facture ↔ bon de livraison</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Compare les quantités <strong>facturées</strong> avec les quantités <strong>livrées</strong>. Sont-elles identiques ?</div>
+    <div class="doc-slot" data-doc="bl"></div>
+    <div class="doc-slot" data-doc="facture"></div>
+    <div class="ligne-on"><span class="lib-on">F65 – farine T65</span><div class="choix" data-q="m3a1"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div>
+    <div class="ligne-on"><span class="lib-on">S130 – farine de seigle T130</span><div class="choix" data-q="m3a2"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div>
+    <div class="ligne-on"><span class="lib-on">B10 – beurre AOP</span><div class="choix" data-q="m3a3"><button type="button">Oui</button><button type="button" data-ok>Non</button></div></div>
+    <div class="ligne-on"><span class="lib-on">SU25 – sucre semoule</span><div class="choix" data-q="m3a4"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div>
+    <div class="questions">
+      <div class="question"><span class="q-num">?</span><div>
+        <p>Quelle phrase décrit l'anomalie ?</p>
+        <div class="choix" data-q="m3a5">
+          <button type="button">10 cartons de beurre ont été livrés mais 8 ont été facturés.</button>
+          <button type="button" data-ok>8 cartons de beurre ont été livrés mais 10 ont été facturés.</button>
+          <button type="button">Il manque 2 sacs de sucre.</button>
+        </div></div></div>
+    </div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 6</span>
+    <span class="badge badge-2">◆ intermédiaire</span>
+    <span class="exo-titre-txt">Facture ↔ tarifs du fournisseur</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Compare les prix unitaires de la facture avec les prix des tarifs. Sont-ils identiques ?</div>
+    <div class="doc-slot" data-doc="tarifs"></div>
+    <div class="doc-slot" data-doc="facture"></div>
+    <div class="ligne-on"><span class="lib-on">F65 – farine T65</span><div class="choix" data-q="m3b1"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div>
+    <div class="ligne-on"><span class="lib-on">S130 – farine de seigle T130</span><div class="choix" data-q="m3b2"><button type="button">Oui</button><button type="button" data-ok>Non</button></div></div>
+    <div class="ligne-on"><span class="lib-on">B10 – beurre AOP</span><div class="choix" data-q="m3b3"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div>
+    <div class="ligne-on"><span class="lib-on">SU25 – sucre semoule</span><div class="choix" data-q="m3b4"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div>
+    <div class="questions">
+      <div class="question"><span class="q-num">?</span><div>
+        <p>Quelle phrase décrit l'anomalie ?</p>
+        <div class="choix" data-q="m3b5">
+          <button type="button" data-ok>La farine de seigle est facturée 26 € au lieu de 24 €.</button>
+          <button type="button">La farine T65 est facturée 19 € au lieu de 21 €.</button>
+          <button type="button">Le beurre est facturé 72 € au lieu de 48 €.</button>
+        </div></div></div>
+    </div>
+    <div class="ordre-grandeur"><strong>Attention :</strong> les tarifs contiennent d'autres produits. Cherche avec la référence (exemple : S130).</div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 7</span>
+    <span class="badge badge-3">▲ costaud</span>
+    <span class="exo-titre-txt">Facture ↔ fiche fournisseur (conditions de vente)</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Le montant brut HT de la facture est de <strong>2 086 €</strong>. Lis la fiche fournisseur et réponds.</div>
+    <div class="doc-slot" data-doc="fiche"></div>
+    <div class="questions">
+      <div class="question"><span class="q-num">1</span><div>
+        <p>2 086 € est plus grand que 1 500 €. Quel taux de remise faut-il appliquer ?</p>
+        <div class="choix" data-q="m3c1"><button type="button">5 %</button><button type="button" data-ok>10 %</button><button type="button">15 %</button></div></div></div>
+      <div class="question"><span class="q-num">2</span><div>
+        <p>Le taux de remise de la facture (5 %) est-il correct ?</p>
+        <div class="choix" data-q="m3c2"><button type="button">Oui</button><button type="button" data-ok>Non</button></div></div></div>
+      <div class="question"><span class="q-num">3</span><div>
+        <p>Les frais de transport : combien la boulangerie doit-elle payer ?</p>
+        <div class="choix" data-q="m3c3"><button type="button">30 €</button><button type="button" data-ok>0 € (franco de port)</button></div></div></div>
+      <div class="question"><span class="q-num">4</span><div>
+        <p>Le mode de règlement de la facture est-il correct ?</p>
+        <div class="choix" data-q="m3c4"><button type="button" data-ok>Oui</button><button type="button">Non</button></div></div></div>
+    </div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 8</span>
+    <span class="badge badge-2">◆ intermédiaire</span>
+    <span class="exo-titre-txt">Chasse aux erreurs : entoure les 4 anomalies</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Clique sur les <strong>4 cases fausses</strong> de la facture pour les entourer. Ne clique pas sur les montants calculés : cherche la <strong>cause</strong> de l'erreur.</div>
+    <p class="compteur">🎯 Anomalies entourées : <span class="nb-trouve">0</span> / 4</p>
+    <div class="doc-slot" data-doc="facture" data-hunt="1"></div>
+    <p class="retour hunt-retour"></p>
+  </div>
+</details>
+
+<hr class="section-sep">
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION 4 – RECTIFIER
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="m4">
+  <span class="icone">✏️</span>
+  <h2>Mission 4 – rectifier la facture</h2>
+  <span class="duree">⏱ 20 min</span>
+</div>
+
+<div class="memo">
+  <div class="memo-titre">🗂 mémo – les 4 corrections</div>
+  <code>Beurre : 8 cartons (et pas 10)        Seigle : 24 € (et pas 26 €)</code>
+  <code>Remise : 10 % (et pas 5 %)            Transport : franco de port (0 €)</code>
+  <p class="note">Recalcule tout, de haut en bas, dans l'ordre du mémo de la mission 2.</p>
+</div>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 9</span>
+    <span class="badge badge-3">▲ costaud</span>
+    <span class="exo-titre-txt">La facture corrigée</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Mme Lefèvre te dit : <strong>« Calcule ce que nous devons vraiment payer. »</strong> Complète la facture corrigée.</div>
+    <div class="grp">
+      <div class="scroll-x">
+      <table class="tab-rempli">
+        <tr><th>Réf.</th><th>Désignation</th><th>Quantité</th><th>Prix unitaire HT</th><th>Montant HT</th></tr>
+        <tr><td>F65</td><td>Farine T65 – sac 25 kg</td><td><input class="rep court" data-ans="50" inputmode="decimal"></td><td><input class="rep" data-ans="19" inputmode="decimal"></td><td><input class="rep" data-ans="950" inputmode="decimal"></td></tr>
+        <tr><td>S130</td><td>Farine de seigle T130 – sac 25 kg</td><td><input class="rep court" data-ans="10" inputmode="decimal"></td><td><input class="rep" data-ans="24" inputmode="decimal"></td><td><input class="rep" data-ans="240" inputmode="decimal"></td></tr>
+        <tr><td>B10</td><td>Beurre AOP – carton 10 kg</td><td><input class="rep court" data-ans="8" inputmode="decimal"></td><td><input class="rep" data-ans="72" inputmode="decimal"></td><td><input class="rep" data-ans="576" inputmode="decimal"></td></tr>
+        <tr><td>SU25</td><td>Sucre semoule – sac 25 kg</td><td><input class="rep court" data-ans="6" inputmode="decimal"></td><td><input class="rep" data-ans="26" inputmode="decimal"></td><td><input class="rep" data-ans="156" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Montant brut HT</td><td><input class="rep" data-ans="1922" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Taux de remise (en %)</td><td><input class="rep" data-ans="10" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Montant de la remise</td><td><input class="rep" data-ans="192.20" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Montant net HT</td><td><input class="rep" data-ans="1729.80" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Frais de transport (0 si franco)</td><td><input class="rep" data-ans="0" data-franco="1" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Total HT</td><td><input class="rep" data-ans="1729.80" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Taux de TVA</td><td style="text-align:right;font-weight:600">5,5 %</td></tr>
+        <tr><td colspan="4" class="lib">Montant de la TVA</td><td><input class="rep" data-ans="95.14" inputmode="decimal"></td></tr>
+        <tr><td colspan="4" class="lib">Total TTC</td><td><input class="rep" data-ans="1824.94" inputmode="decimal"></td></tr>
+      </table>
+      </div>
+      <button class="btn-verif" type="button">Vérifier</button>
+      <p class="retour"></p>
+    </div>
+    <div class="ordre-grandeur"><strong>Ordre de grandeur :</strong> le brut HT corrigé est un peu moins de 2 000 €. Le TTC corrigé est autour de 1 800 €.</div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 10</span>
+    <span class="badge badge-2">◆ intermédiaire</span>
+    <span class="exo-titre-txt">Combien la boulangerie aurait-elle perdu ?</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Facture reçue : <strong>2 122,34 € TTC</strong>. Facture corrigée : <strong>1 824,94 € TTC</strong>.</div>
+    <div class="grp">
+      <div class="calc"><span class="lib-c">Somme payée en trop sans contrôle</span><span class="formule">2 122,34 − 1 824,94 =</span><input class="rep" data-ans="297.40" inputmode="decimal"> €</div>
+      <button class="btn-verif" type="button">Vérifier</button>
+      <p class="retour"></p>
+    </div>
+    <div class="questions">
+      <div class="question"><span class="q-num">?</span><div>
+        <p>Que fait la boulangerie maintenant ?</p>
+        <div class="choix" data-q="m4z">
+          <button type="button">Elle paie 2 122,34 € et ne dit rien.</button>
+          <button type="button" data-ok>Elle contacte le fournisseur et demande une facture corrigée (ou un avoir).</button>
+          <button type="button">Elle ne paie rien du tout.</button>
+        </div></div></div>
+    </div>
+  </div>
+</details>
+
+<hr class="section-sep">
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION 5 – TEST + SYNTHÈSE
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="m5">
+  <span class="icone">✅</span>
+  <h2>Mission 5 – test et synthèse</h2>
+  <span class="duree">⏱ 10 min</span>
+</div>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 11</span>
+    <span class="badge badge-1">⬆ décollage</span>
+    <span class="exo-titre-txt">Vrai ou faux ?</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="ligne-on"><span class="lib-on">La facture est écrite par le client.</span><div class="choix" data-q="vf1"><button type="button">Vrai</button><button type="button" data-ok>Faux</button></div></div>
+    <div class="ligne-on"><span class="lib-on">Franco de port : le client ne paie pas le transport.</span><div class="choix" data-q="vf2"><button type="button" data-ok>Vrai</button><button type="button">Faux</button></div></div>
+    <div class="ligne-on"><span class="lib-on">La remise se calcule sur le montant brut HT.</span><div class="choix" data-q="vf3"><button type="button" data-ok>Vrai</button><button type="button">Faux</button></div></div>
+    <div class="ligne-on"><span class="lib-on">La TVA se calcule sur le total TTC.</span><div class="choix" data-q="vf4"><button type="button">Vrai</button><button type="button" data-ok>Faux</button></div></div>
+    <div class="ligne-on"><span class="lib-on">On vérifie les quantités facturées avec le bon de livraison.</span><div class="choix" data-q="vf5"><button type="button" data-ok>Vrai</button><button type="button">Faux</button></div></div>
+    <div class="ligne-on"><span class="lib-on">La remise s'ajoute au montant brut.</span><div class="choix" data-q="vf6"><button type="button">Vrai</button><button type="button" data-ok>Faux</button></div></div>
+    <div class="ligne-on"><span class="lib-on">Si les calculs sont justes, la facture est forcément juste.</span><div class="choix" data-q="vf7"><button type="button">Vrai</button><button type="button" data-ok>Faux</button></div></div>
+  </div>
+</details>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 12</span>
+    <span class="badge badge-2">◆ intermédiaire</span>
+    <span class="exo-titre-txt">Ma synthèse à compléter</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">Complète la synthèse. Ensuite, recopie-la dans ton cahier.</div>
+    <div class="grp">
+      <div class="calc"><span class="lib-c">La facture est établie par le…</span><select class="sel" data-ans="f"><option value="">…</option><option value="c">client</option><option value="f">fournisseur</option></select></div>
+      <div class="calc"><span class="lib-c">Elle a 3 parties : l'en-tête, le corps et le…</span><select class="sel" data-ans="p"><option value="">…</option><option value="p">pied</option><option value="t">titre</option></select></div>
+      <div class="calc"><span class="lib-c">Les quantités se vérifient avec le…</span><select class="sel" data-ans="bl"><option value="">…</option><option value="t">tarif</option><option value="bl">bon de livraison</option><option value="ff">fiche fournisseur</option></select></div>
+      <div class="calc"><span class="lib-c">Les prix unitaires se vérifient avec le…</span><select class="sel" data-ans="t"><option value="">…</option><option value="t">tarif</option><option value="bl">bon de livraison</option><option value="ff">fiche fournisseur</option></select></div>
+      <div class="calc"><span class="lib-c">La remise et le transport se vérifient avec la…</span><select class="sel" data-ans="ff"><option value="">…</option><option value="t">tarif</option><option value="bl">bon de livraison</option><option value="ff">fiche fournisseur</option></select></div>
+      <div class="calc"><span class="lib-c">Montant net HT = montant brut HT … remise</span><select class="sel" data-ans="m"><option value="">…</option><option value="p">+</option><option value="m">−</option><option value="x">×</option></select></div>
+      <div class="calc"><span class="lib-c">Total TTC = total HT … TVA</span><select class="sel" data-ans="p"><option value="">…</option><option value="p">+</option><option value="m">−</option><option value="x">×</option></select></div>
+      <button class="btn-verif" type="button">Vérifier</button>
+      <p class="retour"></p>
+    </div>
+  </div>
+</details>
+
+<hr class="section-sep">
+
+<!-- ══════════════════════════════════════════════════════════
+     MISSION 6 – SUJET TYPE EXAMEN
+══════════════════════════════════════════════════════════ -->
+<div class="bloc-titre" id="m6">
+  <span class="icone">🏁</span>
+  <h2>Mission 6 – sujet type examen</h2>
+  <span class="duree">⏱ 30 min</span>
+</div>
+
+<div class="memo">
+  <div class="memo-titre">🗂 méthode en 4 étapes</div>
+  <code>① BL → quantités   ② tarifs → prix   ③ fiche → remise, transport, règlement   ④ je recalcule</code>
+  <p class="note">Ici, pas de correction automatique : travaille sur ta feuille, puis ouvre la correction.</p>
+</div>
+
+<details class="exo-card">
+  <summary class="exo-header">
+    <span class="exo-num">Ex. 13</span>
+    <span class="badge badge-exam">★ examen</span>
+    <span class="exo-titre-txt">Pâtisserie Les Délices d'Anaïs – achat de matériel</span>
+    <span class="chevron">▼</span>
+  </summary>
+  <div class="exo-body">
+    <div class="contexte lisible">
+      Tu es en apprentissage à la pâtisserie <strong>Les Délices d'Anaïs</strong>, 5 place du Marché, 71100 Chalon-sur-Saône. Mme Garnier, ta responsable, a acheté du matériel chez <strong>Équip'Fournil</strong>. Elle te demande de contrôler la facture n° 2290 du 06/10/N. Attention : la TVA sur le matériel est de <strong>20 %</strong>.
+    </div>
+    <div class="doc-slot" data-doc="bl2"></div>
+    <div class="doc-slot" data-doc="tarifs2"></div>
+    <div class="doc-slot" data-doc="fiche2"></div>
+    <div class="doc-slot" data-doc="facture2"></div>
+    <div class="questions">
+      <div class="question"><span class="q-num">1</span><div><p>Relevez l'anomalie entre la facture et le bon de livraison.</p></div></div>
+      <div class="question"><span class="q-num">2</span><div><p>Relevez l'anomalie entre la facture et l'extrait des tarifs.</p></div></div>
+      <div class="question"><span class="q-num">3</span><div><p>Relevez les 2 anomalies entre la facture et la fiche fournisseur.</p></div></div>
+      <div class="question"><span class="q-num">4</span><div><p>Établissez la facture rectifiée (corps et pied).</p></div></div>
+      <div class="question"><span class="q-num">5</span><div><p>Calculez l'économie réalisée grâce au contrôle.</p></div></div>
+    </div>
+    <div class="ordre-grandeur"><strong>Ordre de grandeur :</strong> le brut HT corrigé est un peu plus de 5 000 €. Regarde bien dans quelle tranche de remise il se trouve.</div>
+    <button class="btn-corrige" type="button" onclick="toggleCorr(this)">✅ Voir la correction</button>
+    <div class="correction">
+      <div class="corr-etape"><span class="c-num">1</span>
+        Plaques pâtissières : <strong>3 lots</strong> livrés mais <strong>4 lots</strong> facturés.</div>
+      <div class="corr-etape"><span class="c-num">2</span>
+        Batteur-mélangeur 20 L : facturé <strong>1 950 €</strong> au lieu de <strong>1 850 €</strong> (tarif).</div>
+      <div class="corr-etape"><span class="c-num">3</span>
+        Remise de <strong>5 %</strong> au lieu de <strong>8 %</strong> : le brut HT est supérieur à 4 000 €.<br>
+        Règlement « à réception de facture » au lieu de <strong>« virement à 30 jours fin de mois »</strong>.</div>
+      <div class="corr-etape"><span class="c-num">4</span>
+        <table class="tableau-corr">
+          <tr><th>Article</th><th>Calcul</th><th>Montant HT</th></tr>
+          <tr><td>Batteur-mélangeur 20 L</td><td>1 × 1 850</td><td class="val">1 850,00</td></tr>
+          <tr><td>Moules à tarte (lot de 10)</td><td>4 × 45</td><td class="val">180,00</td></tr>
+          <tr><td>Plaques pâtissières (lot de 5)</td><td>3 × 60</td><td class="val">180,00</td></tr>
+          <tr><td>Laminoir de table</td><td>1 × 3 200</td><td class="val">3 200,00</td></tr>
+          <tr class="t-total"><td colspan="2">Montant brut HT</td><td class="val">5 410,00</td></tr>
+          <tr><td colspan="2">Remise 8 % (5 410 × 0,08)</td><td class="val">432,80</td></tr>
+          <tr><td colspan="2">Montant net HT</td><td class="val">4 977,20</td></tr>
+          <tr><td colspan="2">Frais de transport (brut ≥ 3 000 €)</td><td class="val">franco</td></tr>
+          <tr><td colspan="2">Total HT</td><td class="val">4 977,20</td></tr>
+          <tr><td colspan="2">TVA 20 % (4 977,20 × 0,20)</td><td class="val">995,44</td></tr>
+          <tr class="t-total"><td colspan="2">Total TTC</td><td class="val">5 972,64</td></tr>
+        </table>
+      </div>
+      <div class="corr-etape"><span class="c-num">5</span>
+        <code>6 349,80 − 5 972,64 = 377,16 €</code>
+        <p class="res">Économie = <strong>377,16 €</strong></p>
+        <p class="conclu">Le contrôle évite de payer 377,16 € de trop. La pâtisserie demande une facture rectificative ou un avoir à Équip'Fournil, et paie à 30 jours fin de mois.</p>
+      </div>
+    </div>
+  </div>
+</details>
+
+</main>
+
+<footer class="site-footer">
+  Gestion appliquée – terminale bac pro boulanger-pâtissier &nbsp;|&nbsp; Le contrôle des factures reçues – 13 exercices &nbsp;|&nbsp; entreprises et données fictives
+</footer>
+
+<!-- ══ DOCUMENTS (modèles insérés par le script) ═════════════ -->
+<template id="doc-facture">
+  <div class="doc"><div class="doc-etiquette">🧾 Document A – facture reçue</div><div class="doc-in">
+    <div class="doc-entete">
+      <div class="bloc-fourn">MOULINS DE LA SAÔNE<br><span style="font-weight:400">ZA des Prés – 71100 Chalon-sur-Saône<br>Tél. : 03 85 41 XX XX</span></div>
+      <div class="bloc-client">Boulangerie LE PÉTRIN DORÉ<br>8 rue des Halles<br>21000 Dijon</div>
+    </div>
+    <div class="doc-titre">FACTURE N° 1187</div>
+    <div>À Chalon-sur-Saône, le 14 octobre N – votre commande n° 412 du 09/10/N</div>
+    <div class="doc-cond">Délai de livraison : 48 heures – mode de règlement : virement à 30 jours</div>
+    <table>
+      <tr><th>Réf.</th><th>Désignation</th><th>Unité</th><th>Qté</th><th>Prix unit. HT (€)</th><th>Montant HT (€)</th></tr>
+      <tr><td>F65</td><td>Farine T65</td><td>sac 25 kg</td><td class="n clic">50</td><td class="n clic">19,00</td><td class="n cons-c">950,00</td></tr>
+      <tr><td>S130</td><td>Farine de seigle T130</td><td>sac 25 kg</td><td class="n clic">10</td><td class="n clic" data-err="prix">26,00</td><td class="n cons-c">260,00</td></tr>
+      <tr><td>B10</td><td>Beurre AOP</td><td>carton 10 kg</td><td class="n clic" data-err="qte">10</td><td class="n clic">72,00</td><td class="n cons-c">720,00</td></tr>
+      <tr><td>SU25</td><td>Sucre semoule</td><td>sac 25 kg</td><td class="n clic">6</td><td class="n clic">26,00</td><td class="n cons-c">156,00</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant brut HT</td><td class="n cons-c">2 086,00</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Taux de remise</td><td class="n clic" data-err="remise">5 %</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant de la remise</td><td class="n cons-c">104,30</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant net HT</td><td class="n cons-c">1 981,70</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Frais de transport</td><td class="n clic" data-err="port">30,00</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Total HT</td><td class="n cons-c">2 011,70</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Taux de TVA</td><td class="n clic">5,5 %</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant de la TVA</td><td class="n cons-c">110,64</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Total TTC</td><td class="n cons-c"><strong>2 122,34</strong></td></tr>
+    </table>
+  </div></div>
+</template>
+
+<template id="doc-bl">
+  <div class="doc"><div class="doc-etiquette">📦 Document B – bon de livraison</div><div class="doc-in">
+    <div class="doc-entete">
+      <div class="bloc-fourn">MOULINS DE LA SAÔNE<br><span style="font-weight:400">ZA des Prés – 71100 Chalon-sur-Saône</span></div>
+      <div class="bloc-client">Boulangerie LE PÉTRIN DORÉ<br>8 rue des Halles<br>21000 Dijon</div>
+    </div>
+    <div class="doc-titre">BON DE LIVRAISON N° 209</div>
+    <div>Livré le 13 octobre N – votre commande n° 412 du 09/10/N</div>
+    <table style="margin-top:8px">
+      <tr><th>Réf.</th><th>Désignation</th><th>Unité</th><th>Qté commandée</th><th>Qté livrée</th></tr>
+      <tr><td>F65</td><td>Farine T65</td><td>sac 25 kg</td><td class="n">50</td><td class="n">50</td></tr>
+      <tr><td>S130</td><td>Farine de seigle T130</td><td>sac 25 kg</td><td class="n">10</td><td class="n">10</td></tr>
+      <tr><td>B10</td><td>Beurre AOP</td><td>carton 10 kg</td><td class="n">10</td><td class="n"><strong>8</strong></td></tr>
+      <tr><td>SU25</td><td>Sucre semoule</td><td>sac 25 kg</td><td class="n">6</td><td class="n">6</td></tr>
+    </table>
+    <div class="signature"><strong>Observations du client :</strong> il manque 2 cartons de beurre (réf. B10).<br>Reçu par : Mme Lefèvre – signature : <em>Lefèvre</em></div>
+  </div></div>
+</template>
+
+<template id="doc-tarifs">
+  <div class="doc"><div class="doc-etiquette">🏷️ Document C – extrait des tarifs Moulins de la Saône</div><div class="doc-in">
+    <table>
+      <tr><th>Réf.</th><th>Désignation</th><th>Unité</th><th>Prix unitaire HT</th></tr>
+      <tr><td>F45</td><td>Farine T45</td><td>sac 25 kg</td><td class="n">21,00 €</td></tr>
+      <tr><td>F65</td><td>Farine T65</td><td>sac 25 kg</td><td class="n">19,00 €</td></tr>
+      <tr><td>S130</td><td>Farine de seigle T130</td><td>sac 25 kg</td><td class="n">24,00 €</td></tr>
+      <tr><td>B10</td><td>Beurre AOP</td><td>carton 10 kg</td><td class="n">72,00 €</td></tr>
+      <tr><td>CH5</td><td>Chocolat de couverture</td><td>seau 5 kg</td><td class="n">48,00 €</td></tr>
+      <tr><td>LV1</td><td>Levure fraîche</td><td>pain 1 kg</td><td class="n">3,20 €</td></tr>
+      <tr><td>SU25</td><td>Sucre semoule</td><td>sac 25 kg</td><td class="n">26,00 €</td></tr>
+    </table>
+  </div></div>
+</template>
+
+<template id="doc-fiche">
+  <div class="doc"><div class="doc-etiquette">📋 Document D – fiche fournisseur Moulins de la Saône</div><div class="doc-in">
+    <table>
+      <tr><th>Condition</th><th>Ce qui est prévu</th></tr>
+      <tr><td class="lib">Délai de livraison</td><td>48 heures</td></tr>
+      <tr><td class="lib">Remise</td><td>5 % si brut HT &gt; 1 000 €<br>10 % si brut HT &gt; 1 500 €<br>15 % si brut HT &gt; 2 500 €</td></tr>
+      <tr><td class="lib">Transport</td><td>30 € si brut HT &lt; 1 500 €<br>sinon franco de port (gratuit)</td></tr>
+      <tr><td class="lib">Règlement</td><td>virement à 30 jours</td></tr>
+    </table>
+  </div></div>
+</template>
+
+<template id="doc-facture2">
+  <div class="doc"><div class="doc-etiquette">🧾 Document 4 – facture Équip'Fournil</div><div class="doc-in">
+    <div class="doc-entete">
+      <div class="bloc-fourn">ÉQUIP'FOURNIL<br><span style="font-weight:400">14 avenue de l'Industrie – 69007 Lyon</span></div>
+      <div class="bloc-client">Pâtisserie LES DÉLICES D'ANAÏS<br>5 place du Marché<br>71100 Chalon-sur-Saône</div>
+    </div>
+    <div class="doc-titre">FACTURE N° 2290</div>
+    <div>À Lyon, le 6 octobre N – votre commande n° 77 du 28/09/N</div>
+    <div class="doc-cond">Délai de livraison : 8 jours – mode de règlement : chèque à réception de facture</div>
+    <table>
+      <tr><th>Réf.</th><th>Désignation</th><th>Unité</th><th>Qté</th><th>Prix unit. HT (€)</th><th>Montant HT (€)</th></tr>
+      <tr><td>BM20</td><td>Batteur-mélangeur 20 L</td><td>l'article</td><td class="n">1</td><td class="n">1 950,00</td><td class="n">1 950,00</td></tr>
+      <tr><td>MT10</td><td>Moules à tarte</td><td>lot de 10</td><td class="n">4</td><td class="n">45,00</td><td class="n">180,00</td></tr>
+      <tr><td>PP05</td><td>Plaques pâtissières</td><td>lot de 5</td><td class="n">4</td><td class="n">60,00</td><td class="n">240,00</td></tr>
+      <tr><td>LT50</td><td>Laminoir de table</td><td>l'article</td><td class="n">1</td><td class="n">3 200,00</td><td class="n">3 200,00</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant brut HT</td><td class="n">5 570,00</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Taux de remise</td><td class="n">5 %</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant de la remise</td><td class="n">278,50</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant net HT</td><td class="n">5 291,50</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Frais de transport</td><td class="n">franco</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Total HT</td><td class="n">5 291,50</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Taux de TVA</td><td class="n">20 %</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Montant de la TVA</td><td class="n">1 058,30</td></tr>
+      <tr><td colspan="3" class="vide"></td><td colspan="2" class="lib">Total TTC</td><td class="n"><strong>6 349,80</strong></td></tr>
+    </table>
+  </div></div>
+</template>
+
+<template id="doc-bl2">
+  <div class="doc"><div class="doc-etiquette">📦 Document 1 – bon de livraison Équip'Fournil</div><div class="doc-in">
+    <div class="doc-titre">BON DE LIVRAISON N° 845</div>
+    <div>Livré le 5 octobre N – commande n° 77 du 28/09/N</div>
+    <table style="margin-top:8px">
+      <tr><th>Réf.</th><th>Désignation</th><th>Unité</th><th>Qté commandée</th><th>Qté livrée</th></tr>
+      <tr><td>BM20</td><td>Batteur-mélangeur 20 L</td><td>l'article</td><td class="n">1</td><td class="n">1</td></tr>
+      <tr><td>MT10</td><td>Moules à tarte</td><td>lot de 10</td><td class="n">4</td><td class="n">4</td></tr>
+      <tr><td>PP05</td><td>Plaques pâtissières</td><td>lot de 5</td><td class="n">4</td><td class="n">3</td></tr>
+      <tr><td>LT50</td><td>Laminoir de table</td><td>l'article</td><td class="n">1</td><td class="n">1</td></tr>
+    </table>
+    <div class="signature"><strong>Observations :</strong> il manque 1 lot de plaques pâtissières.<br>Reçu par : Mme Garnier</div>
+  </div></div>
+</template>
+
+<template id="doc-tarifs2">
+  <div class="doc"><div class="doc-etiquette">🏷️ Document 2 – extrait des tarifs Équip'Fournil</div><div class="doc-in">
+    <table>
+      <tr><th>Réf.</th><th>Désignation</th><th>Unité</th><th>Prix unitaire HT</th></tr>
+      <tr><td>BM20</td><td>Batteur-mélangeur 20 L</td><td>l'article</td><td class="n">1 850 €</td></tr>
+      <tr><td>BM40</td><td>Batteur-mélangeur 40 L</td><td>l'article</td><td class="n">2 650 €</td></tr>
+      <tr><td>LT50</td><td>Laminoir de table</td><td>l'article</td><td class="n">3 200 €</td></tr>
+      <tr><td>MT10</td><td>Moules à tarte</td><td>lot de 10</td><td class="n">45 €</td></tr>
+      <tr><td>PP05</td><td>Plaques pâtissières</td><td>lot de 5</td><td class="n">60 €</td></tr>
+      <tr><td>PP10</td><td>Plaques pâtissières</td><td>lot de 10</td><td class="n">110 €</td></tr>
+    </table>
+  </div></div>
+</template>
+
+<template id="doc-fiche2">
+  <div class="doc"><div class="doc-etiquette">📋 Document 3 – fiche fournisseur Équip'Fournil</div><div class="doc-in">
+    <table>
+      <tr><th>Condition</th><th>Ce qui est prévu</th></tr>
+      <tr><td class="lib">Délai de livraison</td><td>8 jours</td></tr>
+      <tr><td class="lib">Remise</td><td>5 % si brut HT &gt; 2 000 €<br>8 % si brut HT &gt; 4 000 €<br>12 % si brut HT &gt; 6 000 €</td></tr>
+      <tr><td class="lib">Transport</td><td>45 € si brut HT &lt; 3 000 €, sinon franco de port</td></tr>
+      <tr><td class="lib">Règlement</td><td>virement à 30 jours fin de mois</td></tr>
+    </table>
+  </div></div>
+</template>
+
+<script>
+function toggleCorr(btn) {
+  const corr = btn.nextElementSibling;
+  const isVisible = corr.classList.contains('visible');
+  corr.classList.toggle('visible', !isVisible);
+  btn.textContent = isVisible ? '✅ Voir la correction' : '🔒 Masquer la correction';
+}
+
+/* ── score ───────────────────────────────────────────── */
+const reussis = new Set();
+let total = 0;
+function majScore() {
+  document.getElementById('pts').textContent = reussis.size;
+  document.getElementById('tot').textContent = total;
+  document.getElementById('barre').style.width = (total ? reussis.size / total * 100 : 0) + '%';
+}
+function gagne(id) { if (!reussis.has(id)) { reussis.add(id); majScore(); } }
+
+/* ── insertion des documents ─────────────────────────── */
+document.querySelectorAll('.doc-slot').forEach(slot => {
+  const tpl = document.getElementById('doc-' + slot.dataset.doc);
+  slot.appendChild(tpl.content.cloneNode(true));
+  if (slot.dataset.hunt) slot.querySelector('.doc').classList.add('hunt');
+});
+
+/* ── cartes du lexique ───────────────────────────────── */
+document.querySelectorAll('.carte-mot').forEach(c => c.addEventListener('click', () => {
+  c.classList.toggle('retournee');
+}));
+
+/* ── boutons de choix ────────────────────────────────── */
+document.querySelectorAll('.choix').forEach(grp => {
+  total++;
+  const id = grp.dataset.q;
+  grp.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    if ('ok' in b.dataset) {
+      b.classList.add('bon');
+      grp.querySelectorAll('button').forEach(x => { x.disabled = true; x.classList.remove('faux'); });
+      gagne(id);
+    } else {
+      b.classList.add('faux', 'secoue');
+      setTimeout(() => b.classList.remove('secoue'), 600);
+    }
+  }));
+});
+
+/* ── champs à vérifier ───────────────────────────────── */
+function nombre(v) {
+  v = String(v).toLowerCase().replace(/€|%|\s| /g, '').replace(',', '.');
+  if (v === 'franco') return 0;
+  return v === '' ? NaN : Number(v);
+}
+document.querySelectorAll('.grp').forEach((grp, i) => {
+  const champs = grp.querySelectorAll('input.rep, select.sel');
+  champs.forEach((c, j) => { total++; c.dataset.id = 'g' + i + '_' + j; });
+  const verif = () => {
+    let bons = 0;
+    champs.forEach(c => {
+      let ok;
+      if (c.tagName === 'SELECT') ok = c.value === c.dataset.ans;
+      else ok = Math.abs(nombre(c.value) - Number(c.dataset.ans)) < 0.011;
+      c.classList.toggle('ok', ok);
+      c.classList.toggle('ko', !ok && c.value !== '');
+      if (ok) { bons++; gagne(c.dataset.id); }
+    });
+    const r = grp.querySelector('.retour');
+    if (bons === champs.length) { r.textContent = '🎉 Tout est juste !'; r.className = 'retour ok'; }
+    else { r.textContent = bons + ' / ' + champs.length + ' juste(s). Corrige les cases en rouge.'; r.className = 'retour ko'; }
+  };
+  grp.querySelector('.btn-verif').addEventListener('click', verif);
+  grp.querySelectorAll('input.rep').forEach(inp => inp.addEventListener('keydown', e => { if (e.key === 'Enter') verif(); }));
+});
+
+/* ── chasse aux erreurs ──────────────────────────────── */
+document.querySelectorAll('.doc.hunt').forEach(doc => {
+  const carte = doc.closest('.exo-body');
+  const nb = carte.querySelector('.nb-trouve');
+  const msg = carte.querySelector('.hunt-retour');
+  const explic = {
+    prix: 'Bien vu : le prix du seigle est 24 € dans les tarifs.',
+    qte: 'Bien vu : 8 cartons livrés, pas 10.',
+    remise: 'Bien vu : brut > 1 500 € donc remise de 10 %.',
+    port: 'Bien vu : brut > 1 500 € donc franco de port.'
+  };
+  total++;
+  doc.querySelectorAll('td.clic, td.cons-c').forEach(td => td.addEventListener('click', () => {
+    if (td.dataset.err) {
+      if (td.classList.contains('entoure')) return;
+      td.classList.add('entoure');
+      const n = doc.querySelectorAll('td.entoure').length;
+      nb.textContent = n;
+      msg.textContent = '✔ ' + explic[td.dataset.err];
+      msg.className = 'retour hunt-retour ok';
+      if (n === 4) { msg.textContent = '🎉 Les 4 anomalies sont entourées. Passe à la mission 4.'; gagne('hunt'); }
+    } else if (td.classList.contains('cons-c')) {
+      td.classList.add('cons'); setTimeout(() => td.classList.remove('cons'), 900);
+      msg.textContent = 'Ce montant est peut-être faux, mais c\'est une conséquence. Cherche la cause.';
+      msg.className = 'retour hunt-retour ko';
+    } else {
+      td.classList.add('rien'); setTimeout(() => td.classList.remove('rien'), 900);
+      msg.textContent = 'Pas d\'erreur ici. Compare avec les documents B, C et D.';
+      msg.className = 'retour hunt-retour ko';
+    }
+  }));
+});
+
+/* ── lecture facilitée ───────────────────────────────── */
+const btnF = document.getElementById('btnFacile');
+try { if (localStorage.getItem('facile') === '1') { document.body.classList.add('facile'); btnF.classList.add('on'); } } catch (e) {}
+btnF.addEventListener('click', () => {
+  const on = document.body.classList.toggle('facile');
+  btnF.classList.toggle('on', on);
+  try { localStorage.setItem('facile', on ? '1' : '0'); } catch (e) {}
+});
+
+majScore();
+</script>
+
+</body>
+</html>
